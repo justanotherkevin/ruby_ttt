@@ -9,6 +9,8 @@ class Ttt_game
     @cpu_name = "Ruby TTT"
     @user_name= ""
     @board = nil
+    @active_turn = ""
+    @choice = ""
     @game_over = false
     # if your can restart then it make sense to add score tracking
     @user_score = 0
@@ -54,121 +56,85 @@ class Ttt_game
   end
 
   def cpu_turn
-    avilible_moves = @board.select {|k,v| v == " "}
-    # minimax( board_in_array, 0 )
-    # move = cpu_find_move
-    move = avilible_moves.keys.sample
+    @active_turn = "cpu"
+    availible_moves = @board.select {|k,v| v == " "}
+    # if availible_moves.length < 9
+    #   minimax( @board, 0, @user_symbo)
+    #   @board[@choice] = @cpu_symbo
+    # else
+    # end
+
+    move = availible_moves.keys.sample
     @board[move] = @cpu_symbo
+
     put_line
     notification = " #{@cpu_name} marks #{move.to_s.upcase.green}\n"
     notification.each_char {|c| putc c ; sleep 0.10; $stdout.flush }
     put_line
-    check_game(@cpu_symbo)
+    check_game(@board, @cpu_symbo)
   end
 
-def score(game, depth)
-    if win?(@cpu_symbo)
-        return 10 - depth
-    elsif win?(@user_symbo)
-        return depth - 10
-    else
-        return 0
-    end
-end
+  def no_more_move?(board)
+    board.select {|k,v| v == " "}.length == 0 ? true : false
+  end
 
-def minimax(game, depth)
-    over = false
-    game.each do |row|
-      if row.join.include?(' ') == false
-        over = true
-        break
+  def score(board, depth)
+      if win?(board, @cpu_symbo)
+          return 10 - depth
+      elsif win?(board, @user_symbo)
+          return depth - 10
+      else
+          return 0
       end
-    end
+  end
 
-    return score(game, depth) if over
+  def minimax(board, depth, player)
 
-    depth += 1
-    scores = [] # an array of scores
-    moves = []  # an array of moves
-
-    # Populate the scores array, recursing as needed
-    game.get_available_moves.each do |move|
-        possible_game = game.get_new_state(move)
-        scores.push minimax(possible_game, depth)
-        moves.push move
-    end
-
-    # Do the min or the max calculation
-    if game.active_turn == @player
-        # This is the max calculation
-        max_score_index = scores.each_with_index.max[1]
-        @choice = moves[max_score_index]
-        return scores[max_score_index]
-    else
-        # This is the min calculation
-        min_score_index = scores.each_with_index.min[1]
-        @choice = moves[min_score_index]
-        return scores[min_score_index]
-    end
-end
-  # def cpu_find_move
-  #   # see if cpu can win
-  #   #see if any columns already have 2 (cpu)
-  #   @columns.each do |column|
-  #     if times_in_column(column, @cpu_symbo) == 2
-  #       return empty_in_column column
-  #     end
-  #   end
-  #
-  #   # see if user can win
-  #   #see if any columns already have 2 (user)
-  #   @columns.each do |column|
-  #     if times_in_column(column, @user_symbo) == 2
-  #       binding.pry
-  #       return empty_in_column column
-  #     end
-  #   end
-  #
-  #   #see if any columns aready have 1 (cpu)
-  #   @columns.each do |column|
-  #     if times_in_column(column, @cpu_symbo) == 1
-  #       return empty_in_column column
-  #     end
-  #   end
-  #
-  #   #no strategic spot found so just find a random empty
-  #   k = @board.keys;
-  #   i = rand(k.length)
-  #   if @board[k[i]] == " "
-  #     return k[i]
-  #   else
-  #     #random selection is taken so just find the first empty slot
-  #     @board.each { |k,v| return k if v == " " }
-  #   end
-  # end
-
-  # def times_in_column arr, item
-  #   times = 0
-  #   arr.each do |i|
-  #     times += 1 if @board[i] == item
-  #     unless @board[i] == item || @board[i] == " "
-  #       #oppisite piece is in column so column cannot be used for win.
-  #       #therefore, the strategic thing to do is choose a dif column so return 0.
-  #       return 0
-  #     end
-  #   end
-  #   times
-  # end
-
-  # def empty_in_column arr
-  #   arr.each do |i|
-  #     if @board[i] == " "
-  #       return i
-  #     end
-  #   end
-  # end
+      # return score(board, depth) if no_more_move?(board)
+      if win?(board, @cpu_symbo)
+          return 10 - depth
+      elsif win?(board, @user_symbo)
+          return depth - 10
+      elsif no_more_move?(board)
+          return 0
+      end
+      depth += 1
+      scores = [] # an array of scores
+      moves = []  # an array of moves
+      best_move = {"position" => -999 }
+      symbo = (player == @user_symbo) ? @cpu_symbo : @user_symbo
+      available_moves = board.select {|k,v| v == " "}.keys
+      # Populate the scores array, recursing as needed
+      # p "this is pre loop #{depth}/////////////////////"
+      available_moves.each do |move|
+          # play that move, make new board
+          this_move = { move => symbo}
+          possible_board = board.merge(this_move)
+          # track the score from minimax when hit basecase
+          scores << minimax(possible_board, depth, symbo)
+          moves << move
+          # if game_score > best_move.values[0]
+          #   best_move = { move => game_score }
+          # end
+      end
+      # Do the min or the max calculation
+      # binding.pry
+      # if @active_turn == "user"
+          # This is the max calculation
+          max_score_index = scores.each_with_index.max[1]
+          @choice = moves[max_score_index]
+          puts "i am here "
+          return scores[max_score_index]
+      # else
+      #     # This is the min calculation
+      #     min_score_index = scores.each_with_index.min[1]
+      #     @choice = moves[min_score_index]
+      #     return scores[min_score_index]
+      # end
+  end
 
   def user_turn
+    @active_turn = "user"
     draw_game
     puts " Please specify a move with the format 'A1' , 'B3' , 'C2' etc.\n or type 'exit' to quit".red
     STDOUT.flush
@@ -184,7 +150,7 @@ end
             @board[input] = @user_symbo
             put_line
             puts "#{@user_name} marks #{input.to_s.upcase.green}".neon
-            check_game(@user_symbo)
+            check_game(@board, @user_symbo)
           else
             wrong_move
           end
@@ -213,8 +179,8 @@ end
     user_turn
   end
 
-  def win?(symbo)
-    board_in_array = @board.values.each_slice(3).to_a
+  def win?(board, symbo)
+    board_in_array = board.values.each_slice(3).to_a
     diagnoal_count = [0,0]
     size = board_in_array[0].length
     i = 0
@@ -242,9 +208,9 @@ end
     false
   end
 
-  def check_game(symbo)
+  def check_game(board, symbo)
 
-    if win?(symbo)
+    if win?(board, symbo)
       winner = ""
       if symbo == @user_symbo
         @user_score += 1
@@ -261,7 +227,7 @@ end
       ask_to_play_again
     end
     if @game_over == false
-      moves_remain = @board.values.select{ |v| v == " " }.length
+      moves_remain = board.values.select{ |v| v == " " }.length
       if(moves_remain > 0)
         # switch turn
         if(symbo == @user_symbo)
